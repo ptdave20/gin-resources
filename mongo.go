@@ -19,3 +19,7 @@ func MongoDBHandler(dbURL string, dbName string) gin.HandlerFunc {
 
 	}
 }
+
+func GetMongoDB(c *gin.Context) *mgo.Database {
+	return c.MustGet("db").(*mgo.Database)
+}
