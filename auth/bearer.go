@@ -1,31 +1,71 @@
 package auth
 
 import (
-	gin "gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	"net/http"
 )
 
 const (
 	HAS_TOKEN = "has_token"
 	TOKEN_ERR = "token_err"
 	AUTHENTICATED = "authenticated"
+
 )
 
 type (
 	TokenVerification func(*gin.Context,string) (bool,error)
 )
 
+var (
+	ERROR_NOTOKEN = errors.New("Request lacks a token")
+	ERROR_FAILEDVERIFICATION = errors.New("Token failed verification")
+)
+
+func getCookieToken(c *gin.Context) (string) {
+	if v,err:=c.Cookie("authentication"); err!=nil {
+		return ""
+	} else {
+		return v
+	}
+}
+
+func getBearerToken(c *gin.Context) string {
+	return c.Request.Header.Get("Authentication")
+}
+
 func BearerAuthentication(verification TokenVerification, checkCookie bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth:=c.Request.Header.Get("Authentication")
-		c.Set(HAS_TOKEN, len(auth) == 0)
+		auth:=getBearerToken(c)
 
-		a,e:=verification(c,auth);
-		if e!=nil {
-			c.Set(TOKEN_ERR,e)
-			c.Set(AUTHENTICATED, false)
+		if len(auth) == 0 && checkCookie {
+			auth=getCookieToken(c)
+		}
+
+		if len(auth) == 0 {
+			c.Set(HAS_TOKEN, false)
+			c.Set(TOKEN_ERR, ERROR_NOTOKEN)
+		} else {
+			auth_pass,e:=verification(c,auth);
+			if e!=nil {
+				c.Set(TOKEN_ERR,e)
+			}
+			c.Set(AUTHENTICATED, auth_pass)
+
+		}
+
+		c.Next()
+	}
+}
+
+func RequireAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.MustGet(AUTHENTICATED).(bool) {
+			// We are authenticated
 			c.Next()
-		} else if a {
-			c.Set(AUTHENTICATED, true)
+		} else {
+			c.IndentedJSON(http.StatusUnauthorized,c.MustGet(TOKEN_ERR).(*error))
+			c.Abort()
 		}
 	}
 }
