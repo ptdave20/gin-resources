@@ -1,4 +1,4 @@
-package gin_resources
+package auth
 
 import (
 	gin "gopkg.in/gin-gonic/gin.v1"
@@ -14,7 +14,7 @@ type (
 	TokenVerification func(*gin.Context,string) (bool,error)
 )
 
-func BearerAuthentication(verification TokenVerification) gin.HandlerFunc {
+func BearerAuthentication(verification TokenVerification, checkCookie bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth:=c.Request.Header.Get("Authentication")
 		c.Set(HAS_TOKEN, len(auth) == 0)

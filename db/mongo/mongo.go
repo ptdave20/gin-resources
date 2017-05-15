@@ -1,4 +1,4 @@
-package gin_resources
+package mongo
 
 import (
 	"gopkg.in/gin-gonic/gin.v1"
